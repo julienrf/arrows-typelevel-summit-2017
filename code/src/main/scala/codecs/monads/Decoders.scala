@@ -30,10 +30,13 @@ trait Usage {
   case class Rectangle(width: String, height: String) extends Shape
 
   def shapeDecoder: Decoder[Shape] =
-    field("type").flatMap {
-      case "Circle"    => field("radius").map(Circle)
-      case "Rectangle" => (field("width") tuple field("height")).map(Rectangle.tupled)
-    }
+    for {
+      tpe <- field("type")
+      shape <- tpe match {
+        case "Circle"    => field("radius").map(Circle)
+        case "Rectangle" => (field("width") tuple field("height")).map(Rectangle.tupled)
+      }
+    } yield shape
 
 }
 

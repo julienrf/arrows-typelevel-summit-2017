@@ -65,8 +65,8 @@ var w3c_slidy = {
 
   size_index: 0,
   size_adjustment: 0,
-  sizes:  new Array("10pt", "12pt", "14pt", "16pt", "18pt", "20pt",
-                    "22pt", "24pt", "26pt", "28pt", "30pt", "32pt"),
+  sizes:  new Array("16pt", "18pt", "20pt", "22pt", "24pt",
+                    "26pt", "28pt", "30pt", "32pt", "34pt", "36pt", "38pt"),
 
   // needed for efficient resizing
   last_width: 0,

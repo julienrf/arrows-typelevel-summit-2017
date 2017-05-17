@@ -13,7 +13,7 @@ body
   padding: 0 0 0 0;
   width: 100%;
   height: 100%;
-  color: #333;
+  color: #222;
   background-color: #f9f9f9;
   font-family: "Noto Sans", sans-serif;
 }
@@ -138,11 +138,24 @@ div.slide h1 {
   text-align: center;
 }
 
+div.slide h1 {
+  color: #444;
+}
+
+div.slide .math {
+  font-family: serif;
+}
+div.slide .math em {
+    color: #222;
+}
 div.slide em {
-    color: #111;
+    color: #444;
+}
+div.slide strong {
+    color: #127141;
 }
 blockquote em {
-    font-weight: bold;
+    font-style: normal;
 }
 
 @media screen and (max-device-width: 1024px)
@@ -235,10 +248,10 @@ p.copyright { font-size: smaller }
 
 a img { border-width: 0; border-style: none }
 
-a:visited { color: navy }
-a:link { color: navy }
-a:hover { color: red; text-decoration: underline }
-a:active { color: red; text-decoration: underline }
+a:visited { color: #00428C; }
+a:link { color: #00428C; }
+a:hover { color: #40a070; text-decoration: underline }
+a:active { color: #40a070; text-decoration: underline }
 
 a {text-decoration: none}
 .toolbar a:link {color: gray;}

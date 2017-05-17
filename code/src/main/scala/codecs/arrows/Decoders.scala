@@ -2,6 +2,7 @@ package codecs.arrows
 
 
 import scala.language.higherKinds
+import scala.util.Try
 import scalaz.{-\/, Arrow, Choice, \/, \/-}
 
 trait Decoders {
@@ -16,6 +17,10 @@ trait Decoders {
 
   def nonEmpty[A, B](decoder: Decoder[A, Option[B]]): Decoder[A, B]
 
+  def validate[A](constraint: A => Boolean): Decoder[A, A]
+
+  def double: Decoder[String, Double]
+
 }
 
 trait Usage {
@@ -27,18 +32,21 @@ trait Usage {
 
   case class User(name: String, email: String)
 
-  def userDecoder: Decoder[Input, User] =
-    (field("name") &&& field("email")).mapsnd(User.tupled)
+  def userDecoder: Decoder[Input, User] = {
+    val name = field("name")
+    val email = field("email") >>> validate[String](_.contains('@'))
+    (name &&& email).mapsnd(User.tupled)
+  }
 
   sealed trait Shape
-  case class Circle(radius: String) extends Shape
+  case class Circle(radius: Double) extends Shape
   case class Rectangle(width: String, height: String) extends Shape
 
   def shapeDecoder: Decoder[Input, Shape] = {
     val Decoder = Arrow[Decoder]
     import Decoder._
 
-    val circle: Decoder[Input, Shape] = field("radius").mapsnd(Circle)
+    val circle: Decoder[Input, Shape] = (field("radius") >>> double).mapsnd(Circle)
 
     val rectangle: Decoder[Input, Shape] = (field("width") &&& field("height")).mapsnd(Rectangle.tupled)
 
@@ -60,6 +68,10 @@ trait MapDecoder extends Decoders {
   def field(name: String): Decoder[Input, String] = kvs => kvs.get(name)
 
   def nonEmpty[A, B](decoder: A => Option[Option[B]]): A => Option[B] = decoder andThen (_.flatten)
+
+  def validate[A](constraint: A => Boolean): A => Option[A] = a => if (constraint(a)) Some(a) else None
+
+  def double: String => Option[Double] = s => Try(s.toDouble).toOption
 
   implicit def arrowChoiceDecoder: Arrow[Decoder] with Choice[Decoder] =
     new Arrow[Decoder] with Choice[Decoder] {
@@ -90,6 +102,10 @@ trait Documentation extends Decoders {
   def field(key: String): Schema = Fields(key :: Nil)
 
   def nonEmpty[A, B](decoder: Schema): Schema = decoder
+
+  def validate[A](constraint: A => Boolean): Schema = Fields(Nil)
+
+  def double: Schema = Fields(Nil)
 
   implicit def arrowChoiceDecoder: Arrow[Decoder] with Choice[Decoder] =
     new Arrow[Decoder] with Choice[Decoder] {
