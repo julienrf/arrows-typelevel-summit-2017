@@ -1,8 +1,8 @@
-package arrows.applicativefunctors
+package codecs.applicativefunctors
 
-import cats.Applicative
 
 import scala.language.higherKinds
+import scalaz.Applicative
 
 trait Decoders {
 
@@ -19,12 +19,12 @@ trait Usage {
   val decoders: Decoders
 
   import decoders._
-  import cats.implicits._
+  import scalaz.syntax.all._
 
   case class User(name: String, email: String)
 
   def userDecoder: Decoder[User] =
-    (field("name"), field("email")).map2(User)
+    (field("name") tuple field("email")).map(User.tupled)
 
 }
 
@@ -36,8 +36,8 @@ trait MapDecoder extends Decoders {
 
   implicit def applicativeDecoder: Applicative[Decoder] =
     new Applicative[Decoder] {
-      def pure[A](x: A): Decoder[A] = _ => Some(x)
-      def ap[A, B](ff: Decoder[A => B])(fa: Decoder[A]): Decoder[B] =
+      def point[A](x: => A): Decoder[A] = _ => Some(x)
+      def ap[A, B](fa: => Decoder[A])(ff: => Decoder[A => B]): Decoder[B] =
         kvs => {
           (ff(kvs), fa(kvs)) match {
             case (Some(f), Some(a)) => Some(f(a))
@@ -48,6 +48,10 @@ trait MapDecoder extends Decoders {
 
 }
 
+trait Optimization extends Decoders {
+  // TODO
+}
+
 trait Documentation extends Decoders {
 
   type Decoder[A] = List[String]
@@ -56,8 +60,8 @@ trait Documentation extends Decoders {
 
   implicit def applicativeDecoder: Applicative[Decoder] =
     new Applicative[Decoder] {
-      def pure[A](x: A): List[String] = Nil
-      def ap[A, B](ff: List[String])(fa: List[String]): List[String] = ff ++ fa
+      def point[A](x: => A): List[String] = Nil
+      def ap[A, B](fa: => List[String])(ff: => List[String]): List[String] = ff ++ fa
     }
 
   def jsonSchema[A](decoder: Decoder[A], title: String): String = {
