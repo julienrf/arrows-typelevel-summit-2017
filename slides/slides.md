@@ -280,7 +280,7 @@ val user: Data[User] = (name tuple email).map(User.tupled)
 - We can turn **several** records into a **single** record containing
   all of their fields
 
-### Intuition of an applicative functor {.unnumbered}
+### Intuition of an *applicative functor* {.unnumbered}
 
 ![](applicative-functors.svg)
 
@@ -389,11 +389,15 @@ val shapeData: Data[Shape] = {
 }
 ~~~
 
-### Intuition of a monad {.unnumbered}
+### Intuition of a *monad* {.unnumbered}
 
 - Can do all the things an applicative functor can do
 - Can define a record according to the **actual value** of
   another record’s field
+
+### Intuition of a *monad* {.unnumbered}
+
+![](monads.svg)
 
 ## Interpreters
 
@@ -523,8 +527,6 @@ trait DataDescr {
 
   /** Describes a record with one field */
   def field(name: String): Data[Raw, String]
-  /** Describes a validation rule */
-  def validate[A](p: A => Boolean): Data[A, A]
 
   /** Pretend that `Data[_, _]` is an arrow */
   implicit val arrowData: Arrow[Data]
@@ -539,24 +541,32 @@ trait DataDescr {
 ~~~ scala
 import scalaz.syntax.all._
 
-trait Program {
+trait Program exends DataDescr {
+  import arrowData._
 
   case class User(name: String, email: String)
 
   def userData: Data[Raw, User] = {
     val name  = field("name")
-    val email = field("email") >>> validate(_.contains('@'))
-    (name &&& email).mapsnd(User.tupled)
+    val email = field("email")
+    (name &&& email) >>> arr(User.tupled)
   }
 
 }
 ~~~
 
-### Intuition of arrows {.unnumbered}
+### Record types {.unnumbered}
 
-- **sequentially** combine processing steps
-- directed computation graphs
-    - **fan out** operation (`&&&`)
+![](user-arrows.svg)
+
+### Intuition of an *arrow* {.unnumbered}
+
+- combine processing steps, **sequentially** (`>>>`)
+  or **in parallel** (`&&&`)
+
+### Intuition of an *arrow* {.unnumbered}
+
+![](arrows.svg)
 
 ### Sum types {.unnumbered}
 
@@ -567,10 +577,10 @@ case class Rectangle(width: String, height: String) extends Shape
 
 val shapeDecoder: Data[Raw, Shape] = {
 
-  val circle: Data[Raw, Shape] = field("radius").mapsnd(Circle)
+  val circle: Data[Raw, Shape] = field("radius") >>> arr(Circle)
 
   val rectangle: Data[Raw, Shape] =
-    (field("width") &&& field("height")).mapsnd(Rectangle.tupled)
+    (field("width") &&& field("height")) >>> arr(Rectangle.tupled)
 
   val tpe = field("type")
   ???
@@ -613,9 +623,17 @@ val shapeDecoder: Data[Raw, Shape] = {
 }
 ~~~
 
-### Intuition of choice {.unnumbered}
+### `shapeDecoder`  {.unnumbered}
+
+![](shape-arrows.svg)
+
+### Intuition of *choice* {.unnumbered}
 
 - **fan in**: merge alternative branches
+
+### Intuition of *choice* {.unnumbered}
+
+![](choice.svg)
 
 ## Can we also implement a (useful) documentation interpreter? {.unnumbered}
 

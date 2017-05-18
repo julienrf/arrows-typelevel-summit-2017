@@ -197,8 +197,8 @@ img {
 
 .figure img {
     width: 80%;
-    max-height: 100%;
-    margin-top: 4em;
+    max-height: 90%;
+    margin-top: 8%;
 }
 
 .figure .caption {

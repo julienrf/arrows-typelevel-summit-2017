@@ -2,7 +2,6 @@ package data.arrows
 
 
 import scala.language.higherKinds
-import scala.util.Try
 import scalaz.{-\/, Arrow, Choice, \/, \/-}
 
 trait DataDescr {
@@ -16,10 +15,6 @@ trait DataDescr {
   def field(name: String): Data[Raw, String]
 
   def nonEmpty[A, B](decoder: Data[A, Option[B]]): Data[A, B]
-
-  def validate[A](constraint: A => Boolean): Data[A, A]
-
-  def double: Data[String, Double]
 
   implicit class WithFstOp[A](data: Data[A, Option[Unit \/ Unit]]) {
     import scalaz.syntax.all._
@@ -36,29 +31,31 @@ trait DataDescr {
 
 }
 
-trait Usage extends DataDescr {
+trait Program extends DataDescr {
 
   import scalaz.syntax.all._
 
   case class User(name: String, email: String)
 
   def userData: Data[Raw, User] = {
+    val Decoder = Arrow[Data]
+    import Decoder._
     val name = field("name")
-    val email = field("email") >>> validate[String](_.contains('@'))
-    (name &&& email).mapsnd(User.tupled)
+    val email = field("email")
+    (name &&& email) >>> arr(User.tupled)
   }
 
   sealed trait Shape
-  case class Circle(radius: Double) extends Shape
+  case class Circle(radius: String) extends Shape
   case class Rectangle(width: String, height: String) extends Shape
 
   def shapeData: Data[Raw, Shape] = {
     val Decoder = Arrow[Data]
     import Decoder._
 
-    val circle: Data[Raw, Shape] = (field("radius") >>> double).mapsnd(Circle)
+    val circle: Data[Raw, Shape] = field("radius") >>> arr(Circle)
 
-    val rectangle: Data[Raw, Shape] = (field("width") &&& field("height")).mapsnd(Rectangle.tupled)
+    val rectangle: Data[Raw, Shape] = (field("width") &&& field("height")) >>> arr(Rectangle.tupled)
 
     val tpe: Data[Raw, Option[Unit \/ Unit]] = field("type") >>> arr((_: String) match {
       case "Circle"    => Some(().left)
@@ -78,10 +75,6 @@ trait MapDecoder extends DataDescr {
   def field(name: String): Data[Raw, String] = kvs => kvs.get(name)
 
   def nonEmpty[A, B](decoder: A => Option[Option[B]]): A => Option[B] = decoder andThen (_.flatten)
-
-  def validate[A](constraint: A => Boolean): A => Option[A] = a => if (constraint(a)) Some(a) else None
-
-  def double: String => Option[Double] = s => Try(s.toDouble).toOption
 
   implicit def arrowChoiceData: Arrow[Data] with Choice[Data] =
     new Arrow[Data] with Choice[Data] {
@@ -112,10 +105,6 @@ trait Documentation extends DataDescr {
   def field(key: String): Adt = Record(key :: Nil)
 
   def nonEmpty[A, B](adt: Adt): Adt = adt
-
-  def validate[A](constraint: A => Boolean): Adt = Record(Nil)
-
-  def double: Adt = Record(Nil)
 
   implicit def arrowChoiceData: Arrow[Data] with Choice[Data] =
     new Arrow[Data] with Choice[Data] {
@@ -173,7 +162,7 @@ trait Documentation extends DataDescr {
 
 object Main extends App {
 
-  new Usage with Documentation {
+  new Program with Documentation {
     println("JSON schema for User:")
     println(jsonSchema(userData, "User"))
     println()
@@ -183,7 +172,7 @@ object Main extends App {
     println()
   }
 
-  new Usage with MapDecoder {
+  new Program with MapDecoder {
 
     val kvs = Map("foo" -> "bar", "name" -> "Julien", "email" -> "julien@richard-foy.fr")
 
