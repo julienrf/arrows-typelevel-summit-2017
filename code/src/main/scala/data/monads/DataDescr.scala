@@ -1,35 +1,32 @@
-package codecs.monads
+package data.monads
 
 import scala.language.higherKinds
 import scalaz.Monad
 
-trait Decoders {
+trait DataDescr {
 
-  type Decoder[A]
+  type Data[A]
 
-  implicit def monadDecoder: Monad[Decoder]
+  implicit def monadData: Monad[Data]
 
-  def field(name: String): Decoder[String]
+  def field(name: String): Data[String]
 
 }
 
-trait Usage {
+trait Program extends DataDescr {
 
-  val decoders: Decoders
-
-  import decoders._
   import scalaz.syntax.all._
 
   case class User(name: String, email: String)
 
-  def userDecoder: Decoder[User] =
+  def userData: Data[User] =
     (field("name") tuple field("email")).map(User.tupled)
 
   sealed trait Shape
   case class Circle(radius: String) extends Shape
   case class Rectangle(width: String, height: String) extends Shape
 
-  def shapeDecoder: Decoder[Shape] =
+  def shapeData: Data[Shape] =
     for {
       tpe <- field("type")
       shape <- tpe match {
@@ -40,15 +37,15 @@ trait Usage {
 
 }
 
-trait MapDecoder extends Decoders {
+trait MapDecoder extends DataDescr {
 
-  type Decoder[A] = Map[String, String] => Option[A]
+  type Data[A] = Map[String, String] => Option[A]
 
   def field(name: String): Map[String, String] => Option[String] = kvs => kvs.get(name)
 
-  implicit def monadDecoder: Monad[Decoder] =
-    new Monad[Decoder] {
-      def bind[A, B](fa: Decoder[A])(f: A => Decoder[B]): Decoder[B] =
+  implicit def monadData: Monad[Data] =
+    new Monad[Data] {
+      def bind[A, B](fa: Data[A])(f: A => Data[B]): Data[B] =
         kvs => {
           fa(kvs) match {
             case Some(a) => f(a)(kvs)
@@ -56,28 +53,28 @@ trait MapDecoder extends Decoders {
           }
         }
 
-      def point[A](x: => A): Decoder[A] = _ => Some(x)
+      def point[A](x: => A): Data[A] = _ => Some(x)
     }
 
 }
 
-trait Optimization extends Decoders {
+trait Optimization extends DataDescr {
   // TODO
 }
 
-trait Documentation extends Decoders {
+trait Documentation extends DataDescr {
 
-  type Decoder[A] = List[String]
+  type Data[A] = List[String]
 
   def field(key: String): List[String] = key :: Nil
 
-  implicit def monadDecoder: Monad[Decoder] =
-    new Monad[Decoder] {
+  implicit def monadData: Monad[Data] =
+    new Monad[Data] {
       def point[A](x: => A): List[String] = Nil
-      def bind[A, B](fa: List[String])(f: A => List[String]): List[String] = ???
+      def bind[A, B](fa: List[String])(f: A => List[String]): List[String] = fa
     }
 
-  def jsonSchema[A](decoder: Decoder[A], title: String): String = {
+  def jsonSchema[A](decoder: Data[A], title: String): String = {
 
     def field(name: String): String =
       s"""    "$name": {
@@ -100,27 +97,22 @@ trait Documentation extends Decoders {
 
 object Main extends App {
 
-//  new Usage {
-//    val decoders = new Documentation {}
-//    println(s"`userDecoder` uses keys ${userDecoder.mkString(", ")}.")
-//    println()
-//    println("JSON schema:")
-//    println(decoders.jsonSchema(userDecoder, "User"))
-//    println()
-//  }
+  new Program with Documentation {
+    println("JSON schema of User:")
+    println(jsonSchema(userData, "User"))
+    println()
+  }
 
-  new Usage {
-    val decoders = new MapDecoder {}
-
+  new Program with MapDecoder {
     val kvs = Map("foo" -> "bar", "name" -> "Julien", "email" -> "julien@richard-foy.fr")
 
-    val decodedUser = userDecoder(kvs)
+    val decodedUser = userData(kvs)
 
     println(s"Decoded user: $decodedUser")
 
     val kvs2 = Map("type" -> "Circle", "radius" -> "42")
 
-    println(s"Decoded shape: ${shapeDecoder(kvs2)}")
+    println(s"Decoded shape: ${shapeData(kvs2)}")
   }
 
 }

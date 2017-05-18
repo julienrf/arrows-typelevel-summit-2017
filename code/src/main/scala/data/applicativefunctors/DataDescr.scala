@@ -1,43 +1,40 @@
-package codecs.applicativefunctors
+package data.applicativefunctors
 
 
 import scala.language.higherKinds
 import scalaz.Applicative
 
-trait Decoders {
+trait DataDescr {
 
-  type Decoder[A]
+  type Data[A]
 
-  implicit def applicativeDecoder: Applicative[Decoder]
+  implicit def applicativeData: Applicative[Data]
 
-  def field(name: String): Decoder[String]
+  def field(name: String): Data[String]
 
 }
 
-trait Usage {
+trait Program extends DataDescr {
 
-  val decoders: Decoders
-
-  import decoders._
   import scalaz.syntax.all._
 
   case class User(name: String, email: String)
 
-  def userDecoder: Decoder[User] =
+  def dataUser: Data[User] =
     (field("name") tuple field("email")).map(User.tupled)
 
 }
 
-trait MapDecoder extends Decoders {
+trait MapDecoder extends DataDescr {
 
-  type Decoder[A] = Map[String, String] => Option[A]
+  type Data[A] = Map[String, String] => Option[A]
 
   def field(name: String): Map[String, String] => Option[String] = kvs => kvs.get(name)
 
-  implicit def applicativeDecoder: Applicative[Decoder] =
-    new Applicative[Decoder] {
-      def point[A](x: => A): Decoder[A] = _ => Some(x)
-      def ap[A, B](fa: => Decoder[A])(ff: => Decoder[A => B]): Decoder[B] =
+  implicit def applicativeData: Applicative[Data] =
+    new Applicative[Data] {
+      def point[A](x: => A): Data[A] = _ => Some(x)
+      def ap[A, B](fa: => Data[A])(ff: => Data[A => B]): Data[B] =
         kvs => {
           (ff(kvs), fa(kvs)) match {
             case (Some(f), Some(a)) => Some(f(a))
@@ -48,23 +45,23 @@ trait MapDecoder extends Decoders {
 
 }
 
-trait Optimization extends Decoders {
+trait Optimization extends DataDescr {
   // TODO
 }
 
-trait Documentation extends Decoders {
+trait Documentation extends DataDescr {
 
-  type Decoder[A] = List[String]
+  type Data[A] = List[String]
 
   def field(key: String): List[String] = key :: Nil
 
-  implicit def applicativeDecoder: Applicative[Decoder] =
-    new Applicative[Decoder] {
+  implicit def applicativeData: Applicative[Data] =
+    new Applicative[Data] {
       def point[A](x: => A): List[String] = Nil
       def ap[A, B](fa: => List[String])(ff: => List[String]): List[String] = ff ++ fa
     }
 
-  def jsonSchema[A](decoder: Decoder[A], title: String): String = {
+  def jsonSchema[A](decoder: Data[A], title: String): String = {
 
     def field(name: String): String =
       s"""    "$name": {
@@ -86,21 +83,16 @@ trait Documentation extends Decoders {
 
 object Main extends App {
 
-  new Usage {
-    val decoders = new Documentation {}
-    println(s"`userDecoder` uses keys ${userDecoder.mkString(", ")}.")
-    println()
-    println("JSON schema:")
-    println(decoders.jsonSchema(userDecoder, "User"))
+  new Program with Documentation {
+    println("JSON schema of User:")
+    println(jsonSchema(dataUser, "User"))
     println()
   }
 
-  new Usage {
-    val decoders = new MapDecoder {}
-
+  new Program with MapDecoder {
     val kvs = Map("foo" -> "bar", "name" -> "Julien", "email" -> "julien@richard-foy.fr")
 
-    val decodedUser = userDecoder(kvs)
+    val decodedUser = dataUser(kvs)
 
     println(s"Decoded user: $decodedUser")
   }
