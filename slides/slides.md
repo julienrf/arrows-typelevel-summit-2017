@@ -49,9 +49,9 @@ For $C$ any category, its *arrow category* $Arr(C)$ is the category such that:
 ### Agenda {.unnumbered}
 
 - Context
-- Applicative Functors
-- Monads
-- Arrows
+- Applicative Functor
+- Monad
+- Arrow
 
 # Context
 
@@ -140,7 +140,7 @@ trait DataDescr {
 trait Program extends DataDescr {
 
   /**
-    * A record type with on field named “x”
+    * A record with one field named “x”
     * and containing a `String` value
     */
   val x: Data[String] = field("x")
@@ -212,7 +212,7 @@ trait Program extends DataDescr {
 }
 ~~~
 
-# Applicative Functors
+# Applicative Functor
 
 ## We need the power of applicative functors!
 
@@ -228,7 +228,7 @@ trait DataDescr {
   def field(name: String): Data[String]
 
   /** Pretend that `Data[_]` is an applicative functor */
-  implicit def applicativeData: Applicative[Data]
+  implicit val applicativeData: Applicative[Data]
 
 }
 ~~~
@@ -271,46 +271,692 @@ trait Program extends DataDescr {
 
 ### Intuition of an applicative functor {.unnumbered}
 
+~~~ scala
+val name: Data[String] = …
+val email: Data[String] = …
+val user: Data[User] = (name tuple email).map(User.tupled)
+~~~
 
+- We can turn **several** records into a **single** record containing
+  all of their fields
+
+### Intuition of an applicative functor {.unnumbered}
+
+![](applicative-functors.svg)
+
+### `Data[User]`? {.unnumbered}
+
+- But what is a `Data[User]`?
+- We don’t know yet! `Data` is still an abstract type
+- Interpreters will give `Data` a concrete meaning
 
 ## Interpreters
 
-### Decoder {.unnumbered}
+### `Decoder`  {.unnumbered}
 
-### Documentation {.unnumbered}
+~~~ scala
+trait Decoder extends DataDescr {
 
-# Monads
+  type Data[A] = Map[String, String] => Option[A]
 
-# Arrows
+  // … (implementation of `field` and `applicativeData`)
+}
+~~~
+
+### `Documentation`  {.unnumbered}
+
+~~~ scala
+trait Documentation extends DataDescr {
+
+  type Data[A] = Record
+  case class Record(fields: List[String])
+
+  // … (implementation of `field` and `applicativeData`)
+}
+~~~
+
+# Monad
+
+## Sum types description
+
+### Is our language powerful enough to describe this data type? {.unnumbered}
+
+~~~ scala
+sealed trait Shape
+case class Circle(radius: String) extends Shape
+case class Rectangle(width: String, height: String) extends Shape
+~~~
+
+~~~
+val kvs =
+  Map(
+    "type" -> "Circle",
+    "radius" -> "42"
+  )
+~~~
+
+### Attempt {.unnumbered}
+
+~~~ scala
+sealed trait Shape
+case class Circle(radius: String) extends Shape
+case class Rectangle(width: String, height: String) extends Shape
+~~~
+
+~~~ scala
+val shape: Data[Shape] = {
+  val tpe = field("type")
+  val circle = field("radius").map(Circle)
+  val rectangle =
+    (field("width") tuple field("height")).map(Rectangle.tupled)
+  ???
+}
+~~~
+
+### Monads to the rescue {.unnumbered}
+
+~~~ scala
+import scalaz.Monad
+
+trait DataDescr {
+
+  type Data[A]
+
+  def field(name: String): Data[String]
+
+  /** Pretend that `Data[_]` is a monad */
+  implicit val monadData: Monad[Data]
+
+}
+~~~
+
+### Feel the power of the monad! {.unnumbered}
+
+~~~ scala
+val shapeData: Data[Shape] = {
+
+  val circle: Data[Shape] = field("radius").map(Circle)
+  val rectangle: Data[Shape] =
+    (field("width") tuple field("height")).map(Rectangle.tupled)
+
+  for {
+    tpe   <- field("type")
+    shape <- tpe match {
+      case "Circle" => circle
+      case "Rectangle" => rectangle
+    }
+  } yield shape
+}
+~~~
+
+### Intuition of a monad {.unnumbered}
+
+- Can do all the things an applicative functor can do
+- Can define a record according to the **actual value** of
+  another record’s field
+
+## Interpreters
+
+### `Decoder`  {.unnumbered}
+
+~~~ scala
+trait Decoder extends DataDescr {
+
+  type Data[A] = Map[String, String] => Option[A]
+
+  // … (implementation of `monadData`)
+
+}
+~~~
+
+### `Documentation`  {.unnumbered}
+
+~~~ scala
+trait Documentation extends DataDescr {
+
+  type Data[A] = Record
+  case class Record(fields: List[String])
+
+  val monadData: Monad[Data] = ???
+
+
+
+
+
+}
+~~~
+
+### `Documentation`  {.unnumbered}
+
+~~~ scala
+trait Documentation extends DataDescr {
+
+  type Data[A] = Record
+  case class Record(fields: List[String])
+
+  val monadData: Monad[Data] =
+    new Monad[Data] {
+      def point[A](x: A): Data[A] = ???
+      def bind[A, B](fa: Data[A])(f: A => Data[B]): Data[B] = ???
+    }
+
+}
+~~~
+
+### `Documentation`  {.unnumbered}
+
+~~~ scala
+trait Documentation extends DataDescr {
+
+  type Data[A] = Record
+  case class Record(fields: List[String])
+
+  val monadData: Monad[Data] =
+    new Monad[Data] {
+      def point[A](x: A): Record = ???
+      def bind[A, B](fa: Record)(f: A => Record): Record = ???
+    }
+
+}
+~~~
+
+### `Documentation`  {.unnumbered}
+
+~~~ scala
+trait Documentation extends DataDescr {
+
+  type Data[A] = Record
+  case class Record(fields: List[String])
+
+  val monadData: Monad[Data] =
+    new Monad[Data] {
+      def point[A](x: A): Record = Record(Nil)
+      def bind[A, B](fa: Record)(f: A => Record): Record = ???
+    }
+
+}
+~~~
+
+### `Documentation`  {.unnumbered}
+
+~~~ scala
+trait Documentation extends DataDescr {
+
+  type Data[A] = Record
+  case class Record(fields: List[String])
+
+  val monadData: Monad[Data] =
+    new Monad[Data] {
+      def point[A](x: A): Record = Record(Nil)
+      def bind[A, B](fa: Record)(f: A => Record): Record = fa
+    }
+
+}
+~~~
+
+### `Documentation`  {.unnumbered}
+
+- We always get an empty `Record`…
+
+### Monads: summary {.unnumbered}
+
+- User point of view
+    - **greater** power: describe a data type based on
+      the information contained in another data type’s
+      instance
+- Interpreter point of view
+    - **too much** power: we can not anymore give
+      a useful `Documentation` implementation…
+- Couldn’t we find a better **compromise**?
+
+# Arrow
+
+### Let’s make our `Data` an arrow {.unnumbered}
+
+~~~ scala
+trait DataDescr {
+
+  /** Description of a data type */
+  type Data[A, B]
+  /** Raw format of data */
+  type Raw
+
+  /** Describes a record with one field */
+  def field(name: String): Data[Raw, String]
+  /** Describes a validation rule */
+  def validate[A](p: A => Boolean): Data[A, A]
+
+  /** Pretend that `Data[_, _]` is an arrow */
+  implicit val arrowData: Arrow[Data]
+
+}
+~~~
+
+## Describing data types with arrows
+
+### Record types {.unnumbered}
+
+~~~ scala
+import scalaz.syntax.all._
+
+trait Program {
+
+  case class User(name: String, email: String)
+
+  def userData: Data[Raw, User] = {
+    val name  = field("name")
+    val email = field("email") >>> validate(_.contains('@'))
+    (name &&& email).mapsnd(User.tupled)
+  }
+
+}
+~~~
+
+### Intuition of arrows {.unnumbered}
+
+- **sequentially** combine processing steps
+- directed computation graphs
+    - **fan out** operation (`&&&`)
+
+### Sum types {.unnumbered}
+
+~~~ scala
+sealed trait Shape
+case class Circle(radius: String) extends Shape
+case class Rectangle(width: String, height: String) extends Shape
+
+val shapeDecoder: Data[Raw, Shape] = {
+
+  val circle: Data[Raw, Shape] = field("radius").mapsnd(Circle)
+
+  val rectangle: Data[Raw, Shape] =
+    (field("width") &&& field("height")).mapsnd(Rectangle.tupled)
+
+  val tpe = field("type")
+  ???
+}
+~~~
+
+### Sum types {.unnumbered}
+
+- We still miss some power…
 
 # Choice
 
-# Codecs
-
-# Lenses
-
-# Cartesian Closed Categories
-
----
-
-- Cartesian closed categories (CCCs) can model lambda calculus [ref]
-- Arrows share similarities with CCCs
+### Add the power of making choices {.unnumbered}
 
 ~~~ scala
-trait Category[=>:[_, _]] {
-  def id[A]: A =>: A
-  def compose[A, B, C](bc: B =>: C, ab: A =>: B): A =>: C
-}
+trait DataDescr {
 
-trait Cartesian[=>:[_, _]] extends Category[=>:] {
-  def &&& [A, B, C](ab: A =>: B, ac: A =>: C): A =>: (B, C)
-  def projl[A, B]: (A, B) =>: A
-  def projr[A, B]: (A, B) =>: B
-}
+  /** Pretend that `Data[_, _]` is an arrow with choice */
+  implicit val arrowChoiceData: Arrow[Data] with Choice[Data]
 
-trait Closed[=>:[_, _]] extends Cartesian[=>:] {
-  def apply[A, B]: (A => B, A) =>: B
-  def curry[A, B, C](abc: (A, B) =>: C): A =>: (B => C)
-  def uncurry[A, B, C](abc: A =>: (B => C)): (A, B) =>: C
 }
 ~~~
+
+### Can we now describe sum types? {.unnumbered}
+
+~~~ scala
+val shapeDecoder: Data[Raw, Shape] = {
+  import arrowChoiceData._
+
+  val circle: Data[Raw, Shape] = …
+  val rectangle: Data[Raw, Shape] = …
+
+  val tpe: Data[Raw, Unit \/ Unit] =
+    field("type") >>> arr((_: String) match {
+      case "Circle"    => ().left
+      case "Rectangle" => ().right
+    }
+
+  tpe.withFst >>> (circle ||| rectangle)
+}
+~~~
+
+### Intuition of choice {.unnumbered}
+
+- **fan in**: merge alternative branches
+
+## Can we also implement a (useful) documentation interpreter? {.unnumbered}
+
+### `Documentation`  {.unnumbered}
+
+~~~ scala
+trait Documentation extends DataDescr {
+
+  type Data[A, B] = ???
+  type Raw = ???
+
+  implicit val arrowChoiceData: Arrow[Data] with Choice[Data] = ???
+
+}
+~~~
+
+### `Documentation`  {.unnumbered}
+
+~~~ scala
+trait Documentation extends DataDescr {
+
+  type Data[A, B] = ???
+  type Raw = Nothing
+
+  implicit val arrowChoiceData: Arrow[Data] with Choice[Data] = ???
+
+}
+~~~
+
+### `Documentation`  {.unnumbered}
+
+~~~ scala
+trait Documentation extends DataDescr {
+
+  type Data[A, B] = ???
+  type Raw = Nothing
+
+
+  case class Record(fields: List[String])
+
+
+  implicit val arrowChoiceData: Arrow[Data] with Choice[Data] = ???
+
+}
+~~~
+
+### `Documentation`  {.unnumbered}
+
+~~~ scala
+trait Documentation extends DataDescr {
+
+  type Data[A, B] = ???
+  type Raw = Nothing
+
+  sealed trait Adt
+  case class Record(fields: List[String]) extends Adt
+  case class CoProd(alternatives: List[Record]) extends Adt
+
+  implicit val arrowChoiceData: Arrow[Data] with Choice[Data] = ???
+
+}
+~~~
+
+### `Documentation`  {.unnumbered}
+
+~~~ scala
+trait Documentation extends DataDescr {
+
+  type Data[A, B] = Adt
+  type Raw = Nothing
+
+  sealed trait Adt
+  case class Record(fields: List[String]) extends Adt
+  case class CoProd(alternatives: List[Record]) extends Adt
+
+  implicit val arrowChoiceData: Arrow[Data] with Choice[Data] = ???
+
+}
+~~~
+
+### `Documentation`  {.unnumbered}
+
+~~~ scala
+sealed trait Adt
+case class Record(fields: List[String]) extends Adt
+case class CoProd(alternatives: List[Record]) extends Adt
+
+implicit val arrowChoiceData: Arrow[Data] with Choice[Data] =
+  new Arrow[Data] with Choice[Data] {
+    // …
+  }
+~~~
+
+### `Documentation`  {.unnumbered}
+
+~~~ scala
+sealed trait Adt
+case class Record(fields: List[String]) extends Adt
+case class CoProd(alternatives: List[Record]) extends Adt
+
+implicit val arrowChoiceData: Arrow[Data] with Choice[Data] =
+  new Arrow[Data] with Choice[Data] {
+
+    def compose[A, B, C](f: Data[B, C], g: Data[A, B]): Data[A, C] = ???
+
+    // …
+  }
+~~~
+
+### `Documentation`  {.unnumbered}
+
+~~~ scala
+sealed trait Adt
+case class Record(fields: List[String]) extends Adt
+case class CoProd(alternatives: List[Record]) extends Adt
+
+implicit val arrowChoiceData: Arrow[Data] with Choice[Data] =
+  new Arrow[Data] with Choice[Data] {
+
+    def compose[A, B, C](f: Adt, g: Adt): Adt = ???
+
+    // …
+  }
+~~~
+
+### `Documentation`  {.unnumbered}
+
+~~~ scala
+sealed trait Adt
+case class Record(fields: List[String]) extends Adt
+case class CoProd(alternatives: List[Record]) extends Adt
+
+implicit val arrowChoiceData: Arrow[Data] with Choice[Data] =
+  new Arrow[Data] with Choice[Data] {
+
+    def compose[A, B, C](f: Adt, g: Adt): Adt =
+      (f, g) match {
+        case (Record(fs1), Record(fs2)) => Record(fs1 ++ fs2)
+      }
+
+    // …
+  }
+~~~
+
+### `Documentation`  {.unnumbered}
+
+~~~ scala
+sealed trait Adt
+case class Record(fields: List[String]) extends Adt
+case class CoProd(alternatives: List[Record]) extends Adt
+
+implicit val arrowChoiceData: Arrow[Data] with Choice[Data] =
+  new Arrow[Data] with Choice[Data] {
+
+    def compose[A, B, C](f: Adt, g: Adt): Adt =
+      (f, g) match {
+        case (Record(fs1), Record(fs2)) => Record(fs1 ++ fs2)
+        case (CoProd(as1), CoProd(as2)) => CoProd(as1 ++ as2)
+      }
+
+    // …
+  }
+~~~
+
+### `Documentation`  {.unnumbered}
+
+~~~ scala
+sealed trait Adt
+case class Record(fields: List[String]) extends Adt
+case class CoProd(alternatives: List[Record]) extends Adt
+
+implicit val arrowChoiceData: Arrow[Data] with Choice[Data] =
+  new Arrow[Data] with Choice[Data] {
+
+    def compose[A, B, C](f: Adt, g: Adt): Adt =
+      (f, g) match {
+        case (Record(fs1), Record(fs2)) => Record(fs1 ++ fs2)
+        case (CoProd(as1), CoProd(as2)) => CoProd(as1 ++ as2)
+        case (Record(fs1), CoProd(as2)) => CoProd(as2.map(r => Fields(r.fields ++ fs1)))
+        case (CoProd(as1), Record(fs2)) => coProd(as1.map(r => Fields(r.fields ++ fs2)))
+      }
+
+    // …
+  }
+~~~
+
+### `Documentation`  {.unnumbered}
+
+~~~ scala
+sealed trait Adt
+case class Record(fields: List[String]) extends Adt
+case class CoProd(alternatives: List[Record]) extends Adt
+
+implicit val arrowChoiceData: Arrow[Data] with Choice[Data] =
+  new Arrow[Data] with Choice[Data] {
+
+    def choice[A, B, C](f: Data[A, C], g: Data[B, C]): Data[A \/ B, C] = ???
+
+    // …
+  }
+~~~
+
+### `Documentation`  {.unnumbered}
+
+~~~ scala
+sealed trait Adt
+case class Record(fields: List[String]) extends Adt
+case class CoProd(alternatives: List[Record]) extends Adt
+
+implicit val arrowChoiceData: Arrow[Data] with Choice[Data] =
+  new Arrow[Data] with Choice[Data] {
+
+    def choice[A, B, C](f: Adt, g: Adt): Adt = ???
+
+    // …
+  }
+~~~
+
+### `Documentation`  {.unnumbered}
+
+~~~ scala
+sealed trait Adt
+case class Record(fields: List[String]) extends Adt
+case class CoProd(alternatives: List[Record]) extends Adt
+
+implicit val arrowChoiceData: Arrow[Data] with Choice[Data] =
+  new Arrow[Data] with Choice[Data] {
+
+    def choice[A, B, C](f: Adt, g: Adt): Adt =
+      (f, g) match {
+        case (r1: Record,  r2: Record)  => CoProd(r1 :: r2 :: Nil)
+      }
+
+    // …
+  }
+~~~
+
+### `Documentation`  {.unnumbered}
+
+~~~ scala
+sealed trait Adt
+case class Record(fields: List[String]) extends Adt
+case class CoProd(alternatives: List[Record]) extends Adt
+
+implicit val arrowChoiceData: Arrow[Data] with Choice[Data] =
+  new Arrow[Data] with Choice[Data] {
+
+    def choice[A, B, C](f: Adt, g: Adt): Adt =
+      (f, g) match {
+        case (r1: Record,  r2: Record)  => CoProd(r1 :: r2 :: Nil)
+        case (CoProd(as1), CoProd(as2)) => CoProd(as1 ++ as2)
+      }
+
+    // …
+  }
+~~~
+
+### `Documentation`  {.unnumbered}
+
+~~~ scala
+sealed trait Adt
+case class Record(fields: List[String]) extends Adt
+case class CoProd(alternatives: List[Record]) extends Adt
+
+implicit val arrowChoiceData: Arrow[Data] with Choice[Data] =
+  new Arrow[Data] with Choice[Data] {
+
+    def choice[A, B, C](f: Adt, g: Adt): Adt =
+      (f, g) match {
+        case (r1: Record,  r2: Record)  => CoProd(r1 :: r2 :: Nil)
+        case (CoProd(as1), CoProd(as2)) => CoProd(as1 ++ as2)
+        case (r1: Record,  CoProd(as2)) => CoProd(r1 :: as2)
+      }
+
+    // …
+  }
+~~~
+
+### `Documentation`  {.unnumbered}
+
+~~~ scala
+sealed trait Adt
+case class Record(fields: List[String]) extends Adt
+case class CoProd(alternatives: List[Record]) extends Adt
+
+implicit val arrowChoiceData: Arrow[Data] with Choice[Data] =
+  new Arrow[Data] with Choice[Data] {
+
+    def choice[A, B, C](f: Adt, g: Adt): Adt =
+      (f, g) match {
+        case (r1: Record,  r2: Record)  => CoProd(r1 :: r2 :: Nil)
+        case (CoProd(as1), CoProd(as2)) => CoProd(as1 ++ as2)
+        case (r1: Record,  CoProd(as2)) => CoProd(r1 :: as2)
+        case (CoProd(as1), r2: Record)  => CoProd(r2 :: as1)
+      }
+
+    // …
+  }
+~~~
+
+### Arrows and choice: summary {.unnumbered}
+
+- Arrows (with choice) provides a compromise between applicative
+  functors and monads
+- Users benefit from **more expressive power** than with applicative functors
+- Interpreters are **less constrained** than with monads
+
+## Arrow-ish things worth knowing
+
+### Arrows are relevant for… {.unnumbered}
+
+- Business rules
+- Pipelines of data transformations
+- FRP
+
+# Summary
+
+### Summary {.unnumbered}
+
+- 
+
+# Questions?
+
+# Bonus
+
+## Final encoding
+
+## Some other friends of arrows
+
+### BiArrow {.unnumbered}
+
+- Similar to arrows, but **invertible**
+- Examples of use cases
+    - parser / pretty printer
+    - codecs
+    - lenses
+
+### Cartesian Closed Categories {.unnumbered}
+
+- Cartesian closed categories (CCCs) can model lambda calculus [ref]
+- Examples of use cases
+    - embedded DSLs
+    - meta-programming
+
