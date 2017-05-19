@@ -101,6 +101,10 @@ object Main extends App {
     println("JSON schema of User:")
     println(jsonSchema(userData, "User"))
     println()
+
+    println("JSON schema for Shape:")
+    println(jsonSchema(shapeData, "Shape"))
+    println()
   }
 
   new Program with MapDecoder {

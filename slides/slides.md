@@ -1,11 +1,11 @@
-% Do it with (Free?) arrows!
+% Do it with (*free*?) arrows!
 % Julien Richard-Foy <julien.richard-foy@epfl.ch>
    
   Typelevel Summit Copenhagen -- June 3, 2017
    
   [http://julienrf.github.io/2017/arrows](http://julienrf.github.io/2017/arrows)
 
-# Introduction
+# What is this talk about?
 
 ### What is a monad? {.unnumbered}
 
@@ -31,7 +31,7 @@ For $C$ any category, its *arrow category* $Arr(C)$ is the category such that:
 > Monads are more *powerful* than applicative functors
 
 - What kind of **power** are we talking about?
-- Benefits of **constraining** this power?
+- Can this power be seen as a **constraint**?
 
 ### Goals of this talk {.unnumbered}
 
@@ -280,10 +280,6 @@ val user: Data[User] = (name tuple email).map(User.tupled)
 - We can turn **several** records into a **single** record containing
   all of their fields
 
-### Intuition of an *applicative functor* {.unnumbered}
-
-![](applicative-functors.svg)
-
 ### `Data[User]`? {.unnumbered}
 
 - But what is a `Data[User]`?
@@ -392,12 +388,8 @@ val shapeData: Data[Shape] = {
 ### Intuition of a *monad* {.unnumbered}
 
 - Can do all the things an applicative functor can do
-- Can define a record according to the **actual value** of
-  another record’s field
-
-### Intuition of a *monad* {.unnumbered}
-
-![](monads.svg)
+- Can describe a type according to the **actual value** of
+  another type
 
 ## Interpreters
 
@@ -500,7 +492,7 @@ trait Documentation extends DataDescr {
 
 ### `Documentation`  {.unnumbered}
 
-- We always get an empty `Record`…
+- Where are the record fields???
 
 ### Monads: summary {.unnumbered}
 
@@ -521,7 +513,7 @@ trait Documentation extends DataDescr {
 trait DataDescr {
 
   /** Description of a data type */
-  type Data[A, B]
+  type Data[In, Out]
   /** Raw format of data */
   type Raw
 
@@ -535,6 +527,25 @@ trait DataDescr {
 ~~~
 
 ## Describing data types with arrows
+
+### Record types {.unnumbered}
+
+~~~ scala
+import scalaz.syntax.all._
+
+trait Program exends DataDescr {
+  import arrowData._
+
+  case class User(name: String, email: String)
+
+  def userData: Data[Raw, User] = {
+    val name  = field("name")
+    val email = field("email")
+    (name &&& email) // Data[Raw, (String, String)]
+  }
+
+}
+~~~
 
 ### Record types {.unnumbered}
 
@@ -563,10 +574,6 @@ trait Program exends DataDescr {
 
 - combine processing steps, **sequentially** (`>>>`)
   or **in parallel** (`&&&`)
-
-### Intuition of an *arrow* {.unnumbered}
-
-![](arrows.svg)
 
 ### Sum types {.unnumbered}
 
@@ -630,10 +637,6 @@ val shapeDecoder: Data[Raw, Shape] = {
 ### Intuition of *choice* {.unnumbered}
 
 - **fan in**: merge alternative branches
-
-### Intuition of *choice* {.unnumbered}
-
-![](choice.svg)
 
 ## Can we also implement a (useful) documentation interpreter? {.unnumbered}
 
@@ -938,9 +941,7 @@ implicit val arrowChoiceData: Arrow[Data] with Choice[Data] =
 
 - Arrows (with choice), like monads, provide enough expressive power to describe
   record types and sum types
-- They support a (useful) documentation interpreter
-
-## Arrow-ish things worth knowing
+- Like applicative functors, they support a (useful) documentation interpreter
 
 ### Arrows are relevant for… {.unnumbered}
 

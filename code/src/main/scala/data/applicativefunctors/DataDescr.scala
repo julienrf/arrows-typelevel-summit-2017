@@ -34,10 +34,6 @@ trait MapDecoder extends DataDescr {
 
 }
 
-trait Optimization extends DataDescr {
-  // TODO
-}
-
 trait Documentation extends DataDescr {
 
   type Data[A] = List[String]
