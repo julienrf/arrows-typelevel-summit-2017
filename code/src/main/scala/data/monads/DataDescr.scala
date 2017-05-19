@@ -13,30 +13,6 @@ trait DataDescr {
 
 }
 
-trait Program extends DataDescr {
-
-  import scalaz.syntax.all._
-
-  case class User(name: String, email: String)
-
-  def userData: Data[User] =
-    (field("name") tuple field("email")).map(User.tupled)
-
-  sealed trait Shape
-  case class Circle(radius: String) extends Shape
-  case class Rectangle(width: String, height: String) extends Shape
-
-  def shapeData: Data[Shape] =
-    for {
-      tpe <- field("type")
-      shape <- tpe match {
-        case "Circle"    => field("radius").map(Circle)
-        case "Rectangle" => (field("width") tuple field("height")).map(Rectangle.tupled)
-      }
-    } yield shape
-
-}
-
 trait MapDecoder extends DataDescr {
 
   type Data[A] = Map[String, String] => Option[A]
@@ -94,6 +70,30 @@ trait Documentation extends DataDescr {
 
 }
 
+
+trait Program extends DataDescr {
+
+  import scalaz.syntax.all._
+
+  case class User(name: String, email: String)
+
+  def userData: Data[User] =
+    (field("name") tuple field("email")).map(User.tupled)
+
+  sealed trait Shape
+  case class Circle(radius: String) extends Shape
+  case class Rectangle(width: String, height: String) extends Shape
+
+  def shapeData: Data[Shape] =
+    for {
+      tpe   <- field("type")
+      shape <- tpe match {
+        case "Circle"    => field("radius").map(Circle)
+        case "Rectangle" => (field("width") tuple field("height")).map(Rectangle.tupled)
+      }
+    } yield shape
+
+}
 
 object Main extends App {
 

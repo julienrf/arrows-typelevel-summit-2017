@@ -31,42 +31,6 @@ trait DataDescr {
 
 }
 
-trait Program extends DataDescr {
-
-  import scalaz.syntax.all._
-
-  case class User(name: String, email: String)
-
-  def userData: Data[Raw, User] = {
-    val Decoder = Arrow[Data]
-    import Decoder._
-    val name = field("name")
-    val email = field("email")
-    (name &&& email) >>> arr(User.tupled)
-  }
-
-  sealed trait Shape
-  case class Circle(radius: String) extends Shape
-  case class Rectangle(width: String, height: String) extends Shape
-
-  def shapeData: Data[Raw, Shape] = {
-    val Decoder = Arrow[Data]
-    import Decoder._
-
-    val circle: Data[Raw, Shape] = field("radius") >>> arr(Circle)
-
-    val rectangle: Data[Raw, Shape] = (field("width") &&& field("height")) >>> arr(Rectangle.tupled)
-
-    val tpe: Data[Raw, Option[Unit \/ Unit]] = field("type") >>> arr((_: String) match {
-      case "Circle"    => Some(().left)
-      case "Rectangle" => Some(().right)
-      case _ => None
-    })
-
-    nonEmpty(tpe.withFst) >>> (circle ||| rectangle)
-  }
-}
-
 trait MapDecoder extends DataDescr {
 
   type Raw = Map[String, String]
@@ -158,6 +122,42 @@ trait Documentation extends DataDescr {
     """.stripMargin
   }
 
+}
+
+trait Program extends DataDescr {
+
+  import scalaz.syntax.all._
+
+  case class User(name: String, email: String)
+
+  def userData: Data[Raw, User] = {
+    val Decoder = Arrow[Data]
+    import Decoder._
+    val name = field("name")
+    val email = field("email")
+    (name &&& email) >>> arr(User.tupled)
+  }
+
+  sealed trait Shape
+  case class Circle(radius: String) extends Shape
+  case class Rectangle(width: String, height: String) extends Shape
+
+  def shapeData: Data[Raw, Shape] = {
+    val Decoder = Arrow[Data]
+    import Decoder._
+
+    val circle: Data[Raw, Shape] = field("radius") >>> arr(Circle)
+
+    val rectangle: Data[Raw, Shape] = (field("width") &&& field("height")) >>> arr(Rectangle.tupled)
+
+    val tpe: Data[Raw, Option[Unit \/ Unit]] = field("type") >>> arr((_: String) match {
+      case "Circle"    => Some(().left)
+      case "Rectangle" => Some(().right)
+      case _ => None
+    })
+
+    nonEmpty(tpe.withFst) >>> (circle ||| rectangle)
+  }
 }
 
 object Main extends App {

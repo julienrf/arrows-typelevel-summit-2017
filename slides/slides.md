@@ -936,10 +936,9 @@ implicit val arrowChoiceData: Arrow[Data] with Choice[Data] =
 
 ### Arrows and choice: summary {.unnumbered}
 
-- Arrows (with choice) provides a compromise between applicative
-  functors and monads
-- Users benefit from **more expressive power** than with applicative functors
-- Interpreters are **less constrained** than with monads
+- Arrows (with choice), like monads, provide enough expressive power to describe
+  record types and sum types
+- They support a (useful) documentation interpreter
 
 ## Arrow-ish things worth knowing
 
@@ -947,13 +946,19 @@ implicit val arrowChoiceData: Arrow[Data] with Choice[Data] =
 
 - Business rules
 - Pipelines of data transformations
-- FRP
+- FRP (e.g. [yampa](https://wiki.haskell.org/Yampa))
 
 # Summary
 
 ### Summary {.unnumbered}
 
-- 
+> - We compared the **expressive power** of the operations provided by three **notions of computation** (applicative functors, arrows and monads)
+> - We observed that when we **increase the expressive power** for users, at the same time we **decrease our ability to give useful meanings** to their code
+>     - See also “Constraints liberate, liberties constrain”, Rúnar Bjarnason, 2015 [[video](https://www.youtube.com/watch?v=GqmsQeSzMdw)]
+> - Arrows (with choice) provide a **compromise** between applicative
+  functors and monads
+>     - Users benefit from **more expressive power** than with applicative functors
+>     - Interpreters are **less constrained** than with monads
 
 # Questions?
 
@@ -961,20 +966,25 @@ implicit val arrowChoiceData: Arrow[Data] with Choice[Data] =
 
 ## Final encoding
 
+### Final encoding {.unnumbered}
+
+- [[Kiselyov 2012](http://okmij.org/ftp/tagless-final/course/lecture.pdf)]
+- [[Blanvillain 2017](https://gist.github.com/OlivierBlanvillain/48bb5c66dbb0557da50465809564ee80)]
+
 ## Some other friends of arrows
 
 ### BiArrow {.unnumbered}
 
-- Similar to arrows, but **invertible**
+- Similar to arrows, but **invertible** [[Alimarine et al. 2005](http://ftp.sci.kun.nl/CSI/SoftwEng.FunctLang/papers/2005/alia2005-biarrowsHaskellWorkshop.pdf)]
 - Examples of use cases
-    - parser / pretty printer
+    - parser / pretty printer [[Rendel et al. 2010](http://camlunity.ru/swap/Library/Computer%20Science/Parsers/Invertible%20Syntax%20Descriptions.%20Unifying%20Parsing%20and%20Pretty-Printing.pdf)]
     - codecs
-    - lenses
+    - lenses [[Pickering 2017](https://arxiv.org/pdf/1703.10857)]
 
 ### Cartesian Closed Categories {.unnumbered}
 
-- Cartesian closed categories (CCCs) can model lambda calculus [ref]
+- Cartesian closed categories (CCCs) can model lambda calculus
 - Examples of use cases
     - embedded DSLs
     - meta-programming
-
+- See also [[Elliott 2017](http://conal.net/papers/compiling-to-categories/compiling-to-categories.pdf)]

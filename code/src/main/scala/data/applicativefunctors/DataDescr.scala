@@ -14,17 +14,6 @@ trait DataDescr {
 
 }
 
-trait Program extends DataDescr {
-
-  import scalaz.syntax.all._
-
-  case class User(name: String, email: String)
-
-  def dataUser: Data[User] =
-    (field("name") tuple field("email")).map(User.tupled)
-
-}
-
 trait MapDecoder extends DataDescr {
 
   type Data[A] = Map[String, String] => Option[A]
@@ -78,6 +67,17 @@ trait Documentation extends DataDescr {
       |}
     """.stripMargin
   }
+
+}
+
+trait Program extends DataDescr {
+
+  import scalaz.syntax.all._
+
+  case class User(name: String, email: String)
+
+  def dataUser: Data[User] =
+    (field("name") tuple field("email")).map(User.tupled)
 
 }
 
