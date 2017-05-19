@@ -116,7 +116,9 @@ API endpoint       client, server, documentation
 - serialization
 - deserialization
 - schema documentation
+- lenses
 - UI form
+- …
 
 ### Let’s design a *data description language* {.unnumbered}
 
