@@ -39,7 +39,8 @@ case "$1" in
         ;;
     publish)
         build
-        cp $OUT ~/sites/julienrf.github.com/2017/arrows/
+        cp -R slidy ~/sites/julienrf.github.com/2017/arrows/
+        cp $OUT *.svg *.png ~/sites/julienrf.github.com/2017/arrows/
         ;;
     stop-server)
         stop_server
