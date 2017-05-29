@@ -5,53 +5,13 @@
    
   [http://julienrf.github.io/2017/arrows](http://julienrf.github.io/2017/arrows)
 
-# What is this talk about?
-
-### What is a monad? {.unnumbered}
-
-~~~ scala
-trait Monad[F[_]] {
-  def point[A](a: A): F[A]
-  def bind[A, B](fa: F[A])(f: A => F[B]): F[B]
-}
-~~~
-
-### What is an arrow? {.unnumbered}
-
-For $C$ any category, its *arrow category* $Arr(C)$ is the category such that:
-
-- an object $a$ of $Arr(C)$ is a morphism $a: a_0 \rightarrow{} a_1$ of $C$;
-- a morphism $f: a \rightarrow{} b$ of $Arr(C)$ is a commutative
-  square <br><img src="square.png" style="max-width: 25%"/> in $C$;
-- composition in $Arr(C)$ is given simply by placing commutative squares side
-  by side to get a commutative oblong.
-
-### Power? Constraint? {.unnumbered}
-
-> Monads are more *powerful* than applicative functors
-
-- What kind of **power** are we talking about?
-- Can this power be seen as a **constraint**?
-
-### Goals of this talk {.unnumbered}
-
-- Make these things more **intuitive**
-- Have **fun**
-
-#### Secondary goals {.unnumbered}
-
-- Make the world a **better place**
-
-### Non-goals of this talk {.unnumbered}
-
-- Explain what a *free monad* is
-
-### Agenda {.unnumbered}
+### Outline {.unnumbered}
 
 - Context
 - Applicative Functor
 - Monad
 - Arrow
+- Choice
 
 # Context
 
@@ -76,12 +36,7 @@ For $C$ any category, its *arrow category* $Arr(C)$ is the category such that:
 1 + 1   // This is not an addition
 ~~~
 
-### The essence of descriptions {.unnumbered}
-
-> - “atoms” (`1`, `"foo"`, `point(1, 2)`)
-> - operators (`+`, `concat`, `move`)
-
-### Interpretation**s** {.unnumbered}
+### Interpretation**s** make sense out of descriptions {.unnumbered}
 
 ---------------------------------------------------
 Description        Interpretations
@@ -102,6 +57,11 @@ API endpoint       client, server, documentation
 - Evaluate
 - Generate (code, assets)
 
+### The essence of descriptions {.unnumbered}
+
+> - “atoms” (`1`, `"foo"`, `point(1, 2)`)
+> - operators (`+`, `concat`, `move`)
+
 ## Domain: data
 
 ### Data description {.unnumbered}
@@ -120,7 +80,7 @@ API endpoint       client, server, documentation
 - UI form
 - …
 
-### Let’s design a *data description language* {.unnumbered}
+### Let’s design a *data description* language {.unnumbered}
 
 ~~~ scala
 trait DataDescr {
@@ -128,7 +88,7 @@ trait DataDescr {
   /** A description of data of type `A` */
   type Data[A]
 
-  /** “axiom” describing a record with one
+  /** “atom” describing a record with one
     * field of type `String`
     */
   def field(name: String): Data[String]
@@ -505,7 +465,7 @@ trait Documentation extends DataDescr {
 - Interpreter point of view
     - **too much** power: we can not anymore give
       a useful `Documentation` implementation…
-- Couldn’t we find a better **compromise**?
+- Can we find a better **compromise**?
 
 # Arrow
 
