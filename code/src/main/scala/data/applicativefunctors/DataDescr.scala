@@ -36,17 +36,18 @@ trait MapDecoder extends DataDescr {
 
 trait Documentation extends DataDescr {
 
-  type Data[A] = List[String]
+  type Data[A] = Record
+  case class Record(fields: List[String])
 
-  def field(key: String): List[String] = key :: Nil
+  def field(key: String): Record = Record(key :: Nil)
 
   implicit def applicativeData: Applicative[Data] =
     new Applicative[Data] {
-      def point[A](x: => A): List[String] = Nil
-      def ap[A, B](fa: => List[String])(ff: => List[String]): List[String] = ff ++ fa
+      def point[A](x: => A): Record = Record(Nil)
+      def ap[A, B](fa: => Record)(ff: => Record): Record = Record(ff.fields ++ fa.fields)
     }
 
-  def jsonSchema[A](decoder: Data[A], title: String): String = {
+  def jsonSchema(record: Record, title: String): String = {
 
     def field(name: String): String =
       s"""    "$name": {
@@ -58,7 +59,7 @@ trait Documentation extends DataDescr {
       |  "title": "$title",
       |  "type": "object",
       |  "properties": {
-      |${decoder.map(field).mkString(",\n")}
+      |${record.fields.map(field).mkString(",\n")}
       |  }
       |}
     """.stripMargin

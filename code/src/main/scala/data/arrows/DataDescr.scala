@@ -54,10 +54,6 @@ trait MapDecoder extends DataDescr {
 
 }
 
-trait Optimization extends DataDescr {
-  // TODO
-}
-
 trait Documentation extends DataDescr {
 
   type Raw = Nothing
@@ -92,7 +88,7 @@ trait Documentation extends DataDescr {
         }
     }
 
-  def jsonSchema[A](adt: Adt, title: String): String = {
+  def jsonSchema(adt: Adt, title: String): String = {
 
     def field(name: String, tab: String): String = {
       s"""$tab"$name": {
@@ -143,8 +139,8 @@ trait Program extends DataDescr {
   case class Rectangle(width: String, height: String) extends Shape
 
   def shapeData: Data[Raw, Shape] = {
-    val Decoder = Arrow[Data]
-    import Decoder._
+    val Data = Arrow[Data]
+    import Data._
 
     val circle: Data[Raw, Shape] = field("radius") >>> arr(Circle)
 

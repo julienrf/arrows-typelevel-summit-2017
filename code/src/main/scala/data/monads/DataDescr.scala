@@ -34,23 +34,20 @@ trait MapDecoder extends DataDescr {
 
 }
 
-trait Optimization extends DataDescr {
-  // TODO
-}
-
 trait Documentation extends DataDescr {
 
-  type Data[A] = List[String]
+  type Data[A] = Record
+  case class Record(fields: List[String])
 
-  def field(key: String): List[String] = key :: Nil
+  def field(key: String): Record = Record(key :: Nil)
 
   implicit def monadData: Monad[Data] =
     new Monad[Data] {
-      def point[A](x: => A): List[String] = Nil
-      def bind[A, B](fa: List[String])(f: A => List[String]): List[String] = fa
+      def point[A](x: => A): Record = Record(Nil)
+      def bind[A, B](fa: Record)(f: A => Record): Record = fa
     }
 
-  def jsonSchema[A](decoder: Data[A], title: String): String = {
+  def jsonSchema(record: Record, title: String): String = {
 
     def field(name: String): String =
       s"""    "$name": {
@@ -62,7 +59,7 @@ trait Documentation extends DataDescr {
       |  "title": "$title",
       |  "type": "object",
       |  "properties": {
-      |${decoder.map(field).mkString(",\n")}
+      |${record.fields.map(field).mkString(",\n")}
       |  }
       |}
     """.stripMargin
@@ -92,6 +89,19 @@ trait Program extends DataDescr {
         case "Rectangle" => (field("width") tuple field("height")).map(Rectangle.tupled)
       }
     } yield shape
+
+//  sealed trait Tree
+//  case class Node(left: Tree, right: Tree) extends Tree
+//  case class Leaf(label: String) extends Tree
+//
+//  def treeData: Data[Tree] =
+//    for {
+//      tpe  <- field("type")
+//      tree <- tpe match {
+//        case "Node" => (field("left").flatMap(treeData) tuple field("right").flatMap(treeData)).map(Node.tupled)
+//        case "Leaf" => field("label").map(Leaf)
+//      }
+//    } yield tree
 
 }
 
