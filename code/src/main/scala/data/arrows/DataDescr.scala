@@ -127,8 +127,8 @@ trait Program extends DataDescr {
   case class User(name: String, email: String)
 
   def userData: Data[Raw, User] = {
-    val Decoder = Arrow[Data]
-    import Decoder._
+    val Data = Arrow[Data]
+    import Data._
     val name = field("name")
     val email = field("email")
     (name &&& email) >>> arr(User.tupled)
